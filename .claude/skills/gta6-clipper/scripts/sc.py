@@ -230,9 +230,12 @@ def hls_section(page_or_m3u8, a, b, out, audio_only=False, max_h=1080):
         url = best[1] if best[1].startswith('http') else url.rsplit('/', 1)[0] + '/' + best[1]
         text = _get(url).decode()
     base = url.split('?')[0].rsplit('/', 1)[0]
-    t, segs, d = 0.0, [], None
+    t, segs, d, init = 0.0, [], None, None
     for l in text.splitlines():
-        if l.startswith('#EXTINF:'):
+        if l.startswith('#EXT-X-MAP:'):  # fMP4 streams: every piece needs this header in front
+            u = _re.search(r'URI="([^"]+)"', l).group(1)
+            init = u if u.startswith('http') else base + '/' + u
+        elif l.startswith('#EXTINF:'):
             d = float(l[8:].split(',')[0])
         elif l and not l.startswith('#') and d is not None:
             if t + d > a and t < b:
@@ -244,8 +247,10 @@ def hls_section(page_or_m3u8, a, b, out, audio_only=False, max_h=1080):
     tmp = tempfile.mkdtemp()
     with cf.ThreadPoolExecutor(6) as ex:
         datas = list(ex.map(lambda s: _get(s[1], 60), segs))
-    ts = os.path.join(tmp, 'part.ts')
+    ts = os.path.join(tmp, 'part.mp4' if init else 'part.ts')
     with open(ts, 'wb') as f:
+        if init:
+            f.write(_get(init, 60))
         for x in datas:
             f.write(x)
     ss = max(0.0, a - segs[0][0])
