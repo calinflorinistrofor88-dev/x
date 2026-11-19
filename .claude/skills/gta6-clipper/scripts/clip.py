@@ -717,6 +717,13 @@ def cmd_render(a, d=None, still=None):
             s_ = t_of(st.get('at', 0))
             stickers.append((s_, t_of(st['until']) if st.get('until') is not None else s_ + float(st.get('for', 2.0)), pic,
                              float(st.get('x', W / 2)), float(st.get('y', 700))))
+    overlay = None  # a logo a campaign requires on screen the whole clip: {"src": "<png/webp with transparency>", "w": 640, "x": 540, "y": 1380}
+    ov = p.get('overlay')
+    if ov and os.path.exists(os.path.expanduser(ov['src'])):
+        oi = Image.open(os.path.expanduser(ov['src'])).convert('RGBA')
+        ow = int(ov.get('w', 640))
+        oi = oi.resize((ow, int(ow * oi.height / oi.width)), Image.LANCZOS)
+        overlay = (oi, float(ov.get('x', W / 2)), float(ov.get('y', 1380)))
     # punch-ins: the camera snaps closer on the big moments (auto on the loudest ones, plus Claude's own)
     punches, hits = [], []
     fx_on = look is not None and look.get('anim') and p.get('effects', True)
@@ -867,6 +874,8 @@ def cmd_render(a, d=None, still=None):
             if s_ <= t < e_:
                 k = int(round((t - s_) * FPS))
                 paste(frame, pic, x_, y_, (.4, .75, 1.08, 1.02)[k] if k < 4 else 1.0)
+        if overlay is not None:
+            paste(frame, overlay[0], overlay[1], overlay[2])
         if hook_img is not None and t < hook_until:
             paste(frame, hook_img, W / 2, hook_y)
         ct = next((c for c in track if c['s'] <= t < c['e']), None)
