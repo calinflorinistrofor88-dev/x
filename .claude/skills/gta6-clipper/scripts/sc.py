@@ -168,7 +168,7 @@ def _whisper(wav):
                 for seg in d['segments'] for w in seg.get('words', []) if w['word'].strip()]
     from faster_whisper import WhisperModel
     m = WhisperModel('large-v3-turbo', compute_type='int8')
-    segs, _ = m.transcribe(wav, word_timestamps=True)
+    segs, _ = m.transcribe(wav, word_timestamps=True, vad_filter=True, condition_on_previous_text=False)
     return [dict(w=w.word.strip(), s=round(float(w.start), 3), e=round(float(w.end), 3)) for s in segs for w in s.words if w.word.strip()]
 
 
