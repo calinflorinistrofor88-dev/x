@@ -447,9 +447,11 @@ def strip_emoji(s):
 def hook_pic(text, size=58, maxw=880, style='white'):
     """The title at the top. style: `white` (black words on a white box), `black` (white on a dark box) or `outline`
     (white bold italic words with a black outline and an emoji at the end, like the big clip pages)."""
-    emo = re.findall('[\U0001F000-\U0001FAFF\u2600-\u27BF]', text) if style == 'outline' else []
+    emo = re.findall('[\U0001F000-\U0001FAFF\u2600-\u27BF]', text) if style in ('outline', 'tiktok') else []
     plain = strip_emoji(text)
-    if style == 'outline':
+    if style == 'tiktok':  # TikTok's own text look: plain sentence-case TikTok Sans, white, thin dark edge
+        f = ImageFont.truetype(FX.font_file('tiktok-sans/tiktok-sans-v8-latin-700.ttf'), size)
+    elif style == 'outline':
         f = ImageFont.truetype(FX.font_file('poppins/poppins-v24-latin-800italic.ttf'), size)
     elif style == 'plate':  # the story-page plate: heavy black capitals on a white rounded box, under the captions
         f = ImageFont.truetype(font_file('inter/inter-v20-latin-900.ttf'), size)
@@ -464,12 +466,12 @@ def hook_pic(text, size=58, maxw=880, style='white'):
     wmax = max(f.getlength(L) for L in lines)
     im = Image.new('RGBA', (int(wmax + 2 * px), int(lh * len(lines) + 2 * py)), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    if style == 'outline':
-        st = max(5, size // 9)
+    if style in ('outline', 'tiktok'):
+        st = max(5, size // 9) if style == 'outline' else max(2, size // 20)
         for k, L in enumerate(lines):
             d.text(((im.width - f.getlength(L)) / 2, py + k * lh), L, font=f, fill=(255, 255, 255, 255), stroke_width=st, stroke_fill=(0, 0, 0, 255))
         if emo:  # the emoji goes right after the last word, as big as a capital letter and a half
-            ep = FX.emoji_pic(emo[0], int(size * 1.5))
+            ep = FX.emoji_pic(emo[0], int(size * (1.5 if style == 'outline' else 1.15)))
             if ep is not None:
                 lastw = f.getlength(lines[-1])
                 x0 = int((im.width + lastw) / 2 + size * .2)
